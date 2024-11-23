@@ -1,27 +1,31 @@
-// Import Sequelize
-import { Sequelize } from 'sequelize';
+import express from 'express';
+import connectDb from './config/db.js';
 
-// Database connection details
-const database = 'your_database_name';
-const username = 'your_username';
-const password = 'your_password';
-const host = 'localhost'; // Change this to your database host if needed
-const dialect = 'mysql'; // Change this to the appropriate database dialect (e.g., 'postgres', 'sqlite', etc.)
+const app = express();
+const PORT = 5000;
 
-// Initialize Sequelize
-const sequelize = new Sequelize(database, username, password, {
-  host: host,
-  dialect: dialect,
+
+const startServer = async () => {
+  try {
+    await connectDb();  // Ensure connection is successful
+    console.log('Connected to the Db successfully');
+
+    
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error('Failed to connect to the Db:', error.message);
+    process.exit(1);  // Exit the process if database connection fails
+  }
+};
+
+// Basic route for testing
+app.get('/', (req, res) => {
+  res.send('Hello, World! The server is running.');
 });
 
-// Test the connection
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log('Connection to the database has been established successfully.');
-  })
-  .catch((error) => {
-    console.error('Unable to connect to the database:', error);
-  });
 
-export default sequelize;
+
+startServer();
