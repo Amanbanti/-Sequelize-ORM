@@ -10,12 +10,13 @@ const sequelize = new Sequelize('proshop', 'root', '', {
 const connectDb = async () => {
   try {
     await sequelize.authenticate();
-    console.log('Connection established successfully.');
+    console.log('Database connection established successfully.');
   } catch (err) {
-    console.error('Unable to connect to the database:', err);
-    throw err;  
+    console.error('Unable to connect to the database:', err.message);
+    throw err;
   }
 };
 
 
-export default connectDb;
+// Export the Sequelize instance and the connectDb function
+export { sequelize, connectDb };
