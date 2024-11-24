@@ -1,13 +1,24 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
 import { connectDb, sequelize } from './config/db.js'; 
 import userRoute from './routes/userRoutes.js';
+import path from 'path';
+
+// Get the current directory of the module
+const __dirname = path.resolve();
+
+// Load environment variables from the .env file
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Now, log the environment variable to check if it's loaded
+console.log('JWT_SECRET:', process.env.JWT_SECRET);
 
 const app = express();
 const PORT = 5000;
 
 const startServer = async () => {
   try {
-    
     await connectDb();
     console.log('Connected to the Db successfully');
 
@@ -15,7 +26,6 @@ const startServer = async () => {
     await sequelize.sync({ alter: true }); // Adjust `alter` or `force` based on your requirements
     console.log('All models were synchronized successfully.');
 
-    
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
@@ -28,13 +38,13 @@ const startServer = async () => {
 
 // Body parser middleware
 app.use(express.json());
-
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use('/api/users', userRoute);
 
-
 app.get('/', (req, res) => {
-  res.send('Hello, World! The server is running.');
+  res.send('The server is running...');
 });
 
 startServer();

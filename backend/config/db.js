@@ -18,5 +18,5 @@ const connectDb = async () => {
 };
 
 
-// Export the Sequelize instance and the connectDb function
+
 export { sequelize, connectDb };

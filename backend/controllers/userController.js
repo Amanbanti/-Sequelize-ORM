@@ -1,36 +1,38 @@
 
 import User from '../model/userModel.js';
-// import { generateToken } from "../utils/generateToken.js";
+import { generateToken } from "../utils/generateToken.js";
+import asyncHandler from '../middleware/asyncHandler.js'
 
 
-// export const authUser = async (req, res) =>{
-//     const {email , password} = req.body;
+export const authUser = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
 
-//     const user = await User.findOne({
-//         email: email
-//     })
-//     if(user && (await user.matchPassword(password))){
-        
-//         generateToken ( res,user._id)
-//         res.status(200).json({
-//             _id:user._id,
-//             name: user.name,
-//             email:user.email,
-//             isAdmin: user.isAdmin
-//            })
-//     }else{
-//         res.status(401);
-//         throw new Error('Invalid email or password!')
-//     }
-    
+  // Find the user by email
+  const user = await User.findOne({ where: { email } });
 
-// };
+  if (user && (await user.matchPassword(password))) {
+    // Generate token and send it in the response as a cookie
+    generateToken(res, user.id);
 
-
+    // Send user details (excluding password)
+    res.status(200).json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      isAdmin: user.isAdmin,
+    });
+  } else {
+    res.status(401);
+    throw new Error("Invalid email or password!");
+  }
+});
 
 
 
-export const registerUser = async (req, res) =>{
+
+
+
+export const registerUser = asyncHandler (async (req, res) =>{
     const {name, email,password} = req.body;
     const userExist = await User.findOne({
         where: {
@@ -48,7 +50,7 @@ export const registerUser = async (req, res) =>{
             password: password,
         })
         if(user){
-        // generateToken ( res,user._id)
+        generateToken ( res,user._id)
            res.status(201).json({
             _id:user._id,
             name: user.name,
@@ -61,143 +63,124 @@ export const registerUser = async (req, res) =>{
            }
     }
 
-};
+});
 
 
 
+// Logout User
+export const logoutUser =asyncHandler(async (req, res) => {
+  res.cookie("jwt", "", {
+    httpOnly: true,
+    expires: new Date(0), // Expire the cookie
+  });
 
+  res.status(200).json({ message: "Logged out successfully" });
+});
 
-// export const logoutUser = asyncHandler(async (req, res) => {
-//     res.cookie('jwt', '', {
-//         httpOnly: true,
-//         expires: new Date(0), // Expire the cookie
-//     });
+// Get User Profile
+export const getUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findByPk(req.user.id); // Find user by primary key
 
-//     res.status(200).json({ message: 'Logged out successfully' });
-// });
+  if (user) {
+    res.status(200).json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      isAdmin: user.isAdmin,
+    });
+  } else {
+    res.status(404);
+    throw new Error("User not found!");
+  }
+});
 
+// Update User Profile
+export const updateUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findByPk(req.user.id);
 
+  if (user) {
+    user.name = req.body.name || user.name;
+    user.email = req.body.email || user.email;
 
+    // Check if password is provided in the request body
+    if (req.body.password) {
+      user.password = req.body.password; // Password hashing is handled by hooks in the model
+    }
 
+    const updatedUser = await user.save();
 
-// export const getUserProfile = asyncHandler (async (req, res) =>{
-//     const user = await User.findById(req.user._id);
-    
-//     if (user){
-//         res.status(200).json({
-//             _id:user._id,
-//             name: user.name,
-//             email:user.email,
-//             isAdmin: user.isAdmin
-//            })
+    res.status(200).json({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      isAdmin: updatedUser.isAdmin,
+    });
+  } else {
+    res.status(404);
+    throw new Error("User not found!");
+  }
+});
 
-//     }else{
-//         res.status(404);
-//         throw new Error('User not found!')
-//     }
-// });
+// Get User By ID (Admin)
+export const getUserById = asyncHandler(async (req, res) => {
+  const user = await User.findByPk(req.params.id, {
+    attributes: { exclude: ["password"] }, // Exclude password
+  });
 
+  if (user) {
+    res.status(200).json(user);
+  } else {
+    res.status(404);
+    throw new Error("User not found!");
+  }
+});
 
+// Get All Users (Admin)
+export const getUsers = asyncHandler(async (req, res) => {
+  const users = await User.findAll({
+    attributes: { exclude: ["password"] }, // Exclude password from all users
+  });
 
+  res.status(200).json(users);
+})
 
-// export const updateUserProfile = asyncHandler(async (req, res) => {
-//     const user = await User.findById(req.user._id);
+// Delete User (Admin)
+export const deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findByPk(req.params.id);
 
-//     if (user) {
-//         user.name = req.body.name || user.name;
-//         user.email = req.body.email || user.email;
+  if (user) {
+    if (user.isAdmin) {
+      res.status(400);
+      throw new Error("Cannot delete admin user!");
+    } else {
+      await user.destroy(); // Delete user
+      res.status(200).json({ message: "User deleted successfully!" });
+    }
+  } else {
+    res.status(404);
+    throw new Error("User not found!");
+  }
+});
 
-//         // Check if the password is provided in the request body
-//         if (req.body.password) {
-//             user.password = req.body.password; 
-//         }
+// Update User (Admin)
+export const updateUser = asyncHandler(async (req, res) => {
+  const user = await User.findByPk(req.params.id);
 
-//         const updatedUser = await user.save();
-//         // This will trigger the pre-save middleware to hash the password in the user model
+  if (user) {
+    user.name = req.body.name || user.name;
+    user.email = req.body.email || user.email;
+    user.isAdmin = req.body.isAdmin === undefined ? user.isAdmin : req.body.isAdmin;
 
-//         res.status(200).json({
-//             _id: updatedUser._id,
-//             name: updatedUser.name,
-//             email: updatedUser.email,
-//             isAdmin: updatedUser.isAdmin
-//         });
-//     } else {
-//         res.status(404);
-//         throw new Error('User not found!');
-//     }
-// });
+    const updatedUser = await user.save();
 
-
-
-
-// export const getUserById = asyncHandler (async (req, res) =>{
-    
-//     const user = await User.findById(req.params.id).select('-password')
-//     if(user){
-//         res.status(200).json(user);
-//     }else{
-//         res.status(404);
-//         throw new Error('User not found!');
-//     }
-// });
-
-
-
-
-
-
-// export const getUsers = asyncHandler (async (req, res) =>{
-    
-//     const users = await User.find({}); // Fetch all users
-//     res.status(200).json(users);
-
-// });
-
-
-
-
-// export const deleteUser = asyncHandler (async (req, res) =>{
-    
-//     const user = await User.findById(req.params.id);
-
-//     if(user){
-//         if(user.isAdmin){
-//             res.status(400);
-//             throw new Error('Can not delete admin user!');
-            
-//         }else{
-//             await User.deleteOne({_id: user._id})
-//             res.status(200).json({message: 'User deleted Successfully!'})
-//         }
-//     }else{
-//         res.status(404);
-//         throw new Error('User not found!');
-//     }
-// });
-
-
-
-// export const updateUser = asyncHandler (async (req, res) =>{
-    
-//     const user = await User.findById(req.params.id);
-
-//     if(user){
-//         user.name = req.body.name || user.name;
-//         user.email = req.body.email || user.email;
-//         user.isAdmin = Boolean(req.body.isAdmin);
-
-//         const updatedUser = await user.save();
-
-//         res.status(200).json({
-//             _id: updatedUser._id,
-//             name: updatedUser.name,
-//             email: updatedUser.email,
-//             isAdmin: updatedUser.isAdmin
-
-//         })
-//     }else{
-//         res.status(404);
-//         throw new Error('User not found!');
-//     }
-
-// });
+    res.status(200).json({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      isAdmin: updatedUser.isAdmin,
+    });
+  } else {
+    res.status(404);
+    throw new Error("User not found!");
+  }
+});
