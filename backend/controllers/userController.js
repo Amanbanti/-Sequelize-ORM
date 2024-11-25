@@ -4,6 +4,8 @@ import { generateToken } from "../utils/generateToken.js";
 import asyncHandler from '../middleware/asyncHandler.js'
 
 
+
+
 export const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -67,6 +69,10 @@ export const registerUser = asyncHandler (async (req, res) =>{
 
 
 
+
+
+
+
 // Logout User
 export const logoutUser =asyncHandler(async (req, res) => {
   res.cookie("jwt", "", {
@@ -77,49 +83,8 @@ export const logoutUser =asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 });
 
-// Get User Profile
-export const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findByPk(req.user.id); // Find user by primary key
 
-  if (user) {
-    res.status(200).json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-    });
-  } else {
-    res.status(404);
-    throw new Error("User not found!");
-  }
-});
 
-// Update User Profile
-export const updateUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findByPk(req.user.id);
-
-  if (user) {
-    user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
-
-    // Check if password is provided in the request body
-    if (req.body.password) {
-      user.password = req.body.password; // Password hashing is handled by hooks in the model
-    }
-
-    const updatedUser = await user.save();
-
-    res.status(200).json({
-      id: updatedUser.id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      isAdmin: updatedUser.isAdmin,
-    });
-  } else {
-    res.status(404);
-    throw new Error("User not found!");
-  }
-});
 
 // Get User By ID (Admin)
 export const getUserById = asyncHandler(async (req, res) => {
@@ -135,6 +100,11 @@ export const getUserById = asyncHandler(async (req, res) => {
   }
 });
 
+
+
+
+
+
 // Get All Users (Admin)
 export const getUsers = asyncHandler(async (req, res) => {
   const users = await User.findAll({
@@ -143,6 +113,11 @@ export const getUsers = asyncHandler(async (req, res) => {
 
   res.status(200).json(users);
 })
+
+
+
+
+
 
 // Delete User (Admin)
 export const deleteUser = asyncHandler(async (req, res) => {
@@ -161,6 +136,12 @@ export const deleteUser = asyncHandler(async (req, res) => {
     throw new Error("User not found!");
   }
 });
+
+
+
+
+
+
 
 // Update User (Admin)
 export const updateUser = asyncHandler(async (req, res) => {
